@@ -5,14 +5,19 @@ class BalanceController {
     try {
       const result = await balanceService.updateBalance(
         req.validatedData.userId,
-        req.validatedData.amount,
-        req.validatedData.type
+        req.validatedData.amount
       );
       
       res.json({ success: true, data: result });
     } catch (error) {
       if (error.name === 'InsufficientFundsError') {
         res.status(400).json({
+          success: false,
+          status: 'fail',
+          message: error.message
+        });
+      } else if (error.name === 'NotFoundError') {
+        res.status(404).json({
           success: false,
           status: 'fail',
           message: error.message
@@ -28,7 +33,15 @@ class BalanceController {
       const result = await balanceService.getBalance(parseInt(req.params.userId));
       res.json({ success: true, data: result });
     } catch (error) {
-      next(error);
+      if (error.name === 'NotFoundError') {
+        res.status(404).json({
+          success: false,
+          status: 'fail',
+          message: error.message
+        });
+      } else {
+        next(error);
+      }
     }
   }
 }

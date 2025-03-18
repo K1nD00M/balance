@@ -5,7 +5,6 @@
 - Express
 - PostgreSQL
 - Sequelize
-- Jest
 - Docker
 - Docker Compose
 
@@ -72,8 +71,7 @@ POST /api/balance/update
 ```json
 {
   "userId": 1,
-  "amount": 100,
-  "type": "withdraw" // "deposit"
+  "amount": 100  // Положительное значение - пополнение, отрицательное - списание
 }
 ```
 

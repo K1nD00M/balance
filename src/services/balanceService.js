@@ -2,19 +2,22 @@ const User = require('../models/user');
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../configs/sequelize');
 const { NotFoundError, InsufficientFundsError, AppError } = require('../utils/errors');
-const { OPERATION_TYPES } = require('../validators/balanceValidator');
 
 class BalanceService {
-  async updateBalance(userId, amount, type) {
+  async updateBalance(userId, amount) {
     try {
-      if (type === OPERATION_TYPES.WITHDRAW) {
+      const isWithdraw = amount < 0;
+      const absAmount = Math.abs(amount);
+      const operationType = isWithdraw ? 'withdraw' : 'deposit';
+      
+      if (isWithdraw) {
         const [[result]] = await sequelize.query(
           `UPDATE users 
-           SET balance = balance - :amount 
-           WHERE id = :userId AND balance >= :amount
+           SET balance = balance + :amount 
+           WHERE id = :userId AND balance >= :absAmount
            RETURNING balance`,
           {
-            replacements: { amount, userId },
+            replacements: { amount, userId, absAmount },
             type: QueryTypes.UPDATE
           }
         );
@@ -27,8 +30,8 @@ class BalanceService {
           userId,
           balance: result.balance,
           operation: {
-            type,
-            amount
+            type: operationType,
+            amount: absAmount
           }
         };
       } else {
@@ -43,17 +46,21 @@ class BalanceService {
           }
         );
 
+        if (!result) {
+          throw new NotFoundError('User');
+        }
+
         return {
           userId,
           balance: result.balance,
           operation: {
-            type,
-            amount
+            type: operationType,
+            amount: absAmount
           }
         };
       }
     } catch (error) {
-      if (error instanceof InsufficientFundsError) {
+      if (error instanceof InsufficientFundsError || error instanceof NotFoundError) {
         throw error;
       }
       throw new AppError('Database operation failed', 500);
